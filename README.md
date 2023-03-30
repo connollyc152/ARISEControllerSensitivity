@@ -1,7 +1,5 @@
 # Explore ARISE controller injection amounts to climate modes
 
-Using a CNN to learn the forced response of the CESM dry dynamical core jet stream to a temperature tendency.
-
 ## Files
 **controller/commonrutines.py** : Common routines used in the controller 
 
