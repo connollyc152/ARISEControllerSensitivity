@@ -5,16 +5,20 @@ import numpy as np
 from cartopy.util import add_cyclic_point
 from netCDF4 import date2num,num2date
 
-SST_files = ["Basestates.nc"]
+SST_files = ["SST_Basestates.nc"]
 
-datapath = "/Users/cconn/Documents/Explore_controller/createControllerInputs/CalculatedData/"
+datapath = "/Users/cconn/Documents/Explore_controller/controller_input/Data/"
 
 f = xr.open_dataset(datapath + SST_files[0])
 
 times = f["time"][:660] #86
-times = num2date(times[:],'hours since 1800-01-01', 'noleap')
 lats = f['lat']
 lons = f['lon']
+
+ts_time_units = 'hours since 1800-01-01'
+times = num2date(times, ts_time_units, 'noleap')
+
+f.close()
 
 def Plot_ENSO_Map(plot_data, title, levels, colorbar):
     ax = plt.axes(projection=ccrs.Robinson(central_longitude=180))
@@ -73,67 +77,31 @@ def Add_Metadata_4_cut(data):
     return data
 
 
-def Calc_ENSO34():
-    
-    ensemble_array = np.empty(shape = (10, 660, 192, 288))
-        
-    f = xr.open_dataset("/Users/cconn/Documents/Explore_controller/createControllerInputs/CalculatedData/SST_anomalies.nc")
-    vals = f["SST_anom"]
-    
-    vals = np.array(vals)
-    
-    Plot_Gobal_Map(vals[0,0,:,:], 'SST', None, 'Reds')
-    
-    ensemble_array[:,:,:,:] = vals
+def Calc_ENSO34(ensemble_array, STANDARDIZE, RUNMEAN):
     
     ensemble_array = Add_Metadata_4(ensemble_array)
-    Plot_Gobal_Map(ensemble_array[0,0,:,:], 'Ensemble member 1 SST 01-01-2035', np.arange(0,30,1), None) 
+    if STANDARDIZE:
+        ensemble_array = ensemble_array.groupby("time.month") / ensemble_array.groupby("time.month").std("time")
     
     tos_nino34 = ensemble_array.sel(lat=slice(-5, 5), lon=slice(190, 240))
-    
-    Plot_ENSO_Map(tos_nino34[0,0,:,:], 'SST anomaly over the Nino 3.4 region', np.arange(0,30,1), None)  
     tos_nino34 = Add_Metadata_4_cut(tos_nino34)
     
-    #DO I NEED THIS SINCE THEY ARE ALREADY ANOMALIES?
-    # gb = tos_nino34.groupby('time.month')
-    # tos_nino34_anom = gb - gb.mean(dim='time')
-        
-    # weights = np.cos(np.deg2rad(tos_nino34_anom.lat))
-    # weights.name = "weights"
-    # index_nino34 = tos_nino34_anom.weighted(weights).mean(("lat", "lon"))
-    
     weights = np.cos(np.deg2rad(tos_nino34.lat))
     weights.name = "weights"
     index_nino34 = tos_nino34.weighted(weights).mean(("lat", "lon"))
     
-    index_nino34_rolling_mean = index_nino34 #index_nino34.rolling(time=5, center=True).mean()
-    
-    plt.plot(index_nino34_rolling_mean[0,:])
-    plt.plot(index_nino34_rolling_mean[1,:])
-    plt.show()
+    if RUNMEAN > 0:
+        index_nino34 = index_nino34.rolling(time=RUNMEAN, center=True).mean()
 
-    return(index_nino34_rolling_mean)
+    return(index_nino34)
 
-def Calc_ENSO34_single(SST):
+def Calc_ENSO34_oneSST(SST):
     
     tos_nino34 = SST.sel(lat=slice(-5, 5), lon=slice(190, 240))
-    
-    # Plot_ENSO_Map(tos_nino34[0,0,:,:], 'SST anomaly over the Nino 3.4 region', np.arange(0,30,1), None)  
-    # tos_nino34 = Add_Metadata_4_cut(tos_nino34)
-    
-    # gb = tos_nino34.groupby('time.month')
-    # tos_nino34_anom = gb - gb.mean(dim='time')
-    
-    
+
     weights = np.cos(np.deg2rad(tos_nino34.lat))
     weights.name = "weights"
     index_nino34 = tos_nino34.weighted(weights).mean(("lat", "lon"))
-    
-    # index_nino34_rolling_mean = index_nino34.rolling(time=5, center=True).mean()
-    
-    # plt.plot(index_nino34_rolling_mean[0,:])
-    # plt.plot(index_nino34_rolling_mean[1,:])
-    # plt.show()
 
     return(index_nino34)
 
@@ -161,7 +129,7 @@ def cal_ninoCR(sst, anom_method, index="nino3.4", standardize=False):
         nino_smooth = nino.rolling(time=3, center=True).mean()
     return nino
 
-# f = xr.open_dataset("/Users/cconn/Documents/Explore_controller/createControllerInputs/CalculatedData/SST_anomalies.nc")
+# f = xr.open_dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/SST_anomalies.nc")
 # vals = f["SST_anom"]
 
 # vals = np.array(vals)
@@ -172,5 +140,7 @@ def cal_ninoCR(sst, anom_method, index="nino3.4", standardize=False):
 # nino = cal_ninoCR(vals[1,0,:,:], 1, standardize = True)
 # print(nino)
 
-# nino = Calc_ENSO34_single(vals[1,0,:,:])
+# nino = Calc_ENSO34_oneSST(vals[1,0,:,:])
 # print(nino)
+
+# sys.exit()

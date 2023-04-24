@@ -57,6 +57,7 @@ def Plot_Gobal_Map(plot_data, title, levels, colorbar, lats, lons):
 
 
 casepath='/Users/cconn/Documents/Explore_controller/controller'#+runname
+outputpath = "/Users/cconn/Documents/Explore_controller/controller_output"
 maindir=casepath
 frequency='1y'
 
@@ -65,7 +66,7 @@ driver_path_name = '/Users/cconn/Documents/Explore_controller/controller/driver.
 
 OPEN_AND_PUSH = False
 
-def Controller_Injection(vals, runname, data_type):
+def Controller_Injection(vals, runname, ADD_FILEHEADERS, METADATA):
     runnames=runname
     casepath='/Users/cconn/Documents/Explore_controller/controller/'#+runname
     maindir=casepath
@@ -81,7 +82,7 @@ def Controller_Injection(vals, runname, data_type):
     lats = f['lat']
     lons = f['lon']
     
-    Plot_Gobal_Map(np.mean(vals[:,:,:], axis = 0), "Input CI", None, None, lats, lons)
+    # Plot_Gobal_Map(np.mean(vals[:,:,:], axis = 0), "Input CI", None, None, lats, lons)
     
     times =  times.values
     lats = lats.values

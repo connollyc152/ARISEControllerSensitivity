@@ -35,29 +35,33 @@ refvals=[288.64,0.8767,-5.89] # updated to be average over years 2010-2029
 new_refvals=[288.14,0.8497,-5.90] # new target values: averages during the years 2000-2019 (in which T0 is ~0.5 degrees lower than the old targets)
 #new_refvals=[287.64,0.7348,-5.97] # new target values: averages during the years 1984-2003 (in which T0 is ~1.0 degrees lower than the old targets)
 
+outputpath = "/Users/cconn/Documents/Explore_controller/controller_output/"
+
 #refvals=[288.21,0.594,-6.006] # new version of the model (GLENS values)
 kivals=[0.0183,0.0753,0.3120] #[0.0183,0.0753,0.3120]
 kpvals=[0.0183,0.0753,0.3120] #[0.0183,0.0753,0.3120]
 # kivals=[0.,0.,0.]
 # kpvals=[0.,0.,0.]
-firstyear=2035
+# firstyear=2035
 baseyear=2030#2030
 #Change to Zero
 x_ramp = 0#5.0 # defines a range of years over which the feedback is ramped up
 
 
 #### USER SPECIFIED CALCULATIONS ####
-logfilename='ControlLog_'+runnames+'.txt'
+logfilename='data/ControlLog_'+runnames+'.txt'
 
-logheader=['Timestamp','dT0','sum(dT0)','dT1','sum(dT1)','dT2','sum(dT2)','L0','L1N','L1S','L2','30S(Tg)','15S(Tg)','15N(Tg)','30N(Tg)']
+logheader=['dT0','sum(dT0)','dT1','sum(dT1)','dT2','sum(dT2)','L0','L1N','L1S','L2','30S(Tg)','15S(Tg)','15N(Tg)','30N(Tg)']
+logheader.extend(list(ADD_FILEHEADERS))
 
 firsttime=0
-if os.path.exists(maindir+logfilename)==False:
+if os.path.exists(outputpath+logfilename)==False:
+    print(outputpath+logfilename)
     # print("This is the first file")
     firsttime=1
 else:
     # print("this continues a file")
-    loglines=readlog(maindir+logfilename)
+    loglines=readlog(outputpath+logfilename)
 
 import numpy as np
 w=makeweights(lats,lons)
@@ -71,12 +75,16 @@ T2=numpy.mean(l2mean(outvals[0],w,lats)) #-5.89 #numpy.mean(l2mean(outvals[0],w,
 # T0 = 290.38532417121905
 # T1 =  0.8008744066435923
 # T2 = -5.7479355939554795
-# print(T0, T1, T2)
 
 de=numpy.array([T0-refvals[0],T1-refvals[1],T2-refvals[2]]) # error terms
+# de = [-0.133339565, -0.049139536, 0.022998908]
+# print(de)
 
-timestamp=firstyear
+# timestamp=firstyear
 sumde=de
+# sumde =  [2.074497841, -1.462632687, -0.187577661]
+# print(sumde)
+
 sumdt2=de[2]
 
 # if firsttime==1:
@@ -91,8 +99,9 @@ sumdt2=de[2]
 #     sumde=numpy.array([sumdt0,sumdt1,sumdt2])
 
 # dt should be 1
-dt=1 #timestamp-baseyear
-dt2=timestamp-firstyear
+dt=1 #1 #timestamp-baseyear
+# dt=int(METADATA[0])-baseyear
+# dt2=timestamp-firstyear
 # feedforward
 #l0hat=0.011*dt
 #l1hat=-0.005*dt
@@ -123,8 +132,13 @@ l0=max(l0step4,0)
 l1n=min(max(l1step4,0),l0)
 l1s=min(max(-l1step4,0),l0)
 l2=min(max(l2step4,0),l0-l1s-l1n)
-ell=numpy.array([[l0],[l1n],[l1s],[l2]])
 
+# l0=0.174323196454
+# l1n=0 
+# l1s=0.131598046625
+# l2=0
+
+ell=numpy.array([[l0],[l1n],[l1s],[l2]])
 
 # preventing integrator wind-up
 if (l2==(l0-l1s-l1n)):
@@ -136,12 +150,19 @@ F=numpy.array([[1,1,1,1],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
 
 q=numpy.dot(numpy.dot(numpy.transpose(M),numpy.linalg.inv(F)),ell)
 
+
 # sensitivity[:,la,lo] = q[:,0]
+
+# sys.exit()
 
 for k in range(len(q)):
     q[k]=max(q[k],0)
 
-newline=[str(data_type),str(timestamp),str(de[0]),str(sumde[0]),str(de[1]),str(sumde[1]),str(de[2]),str(sumde[2]),str(l0),str(l1n),str(l1s),str(l2),str(q[0])[1:-1],str(q[1])[1:-1],str(q[2])[1:-1],str(q[3])[1:-1]]
+newline=[str(de[0]),str(sumde[0]),str(de[1]),str(sumde[1]),str(de[2]),str(sumde[2]),str(l0),str(l1n),str(l1s),str(l2),str(q[0])[1:-1],str(q[1])[1:-1],str(q[2])[1:-1],str(q[3])[1:-1]]
+
+for M in range(0,len(METADATA),1):
+    newline.append(METADATA[M])
+
 if firsttime==1:
     linestowrite=[logheader,newline]
 else:
@@ -150,5 +171,5 @@ else:
         linestowrite.append(loglines[k])
     linestowrite.append(newline)
 
-writelog(maindir+'/'+logfilename,linestowrite)
+writelog(outputpath+'/'+logfilename,linestowrite)
 
