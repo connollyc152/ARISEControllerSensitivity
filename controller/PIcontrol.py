@@ -38,7 +38,7 @@ new_refvals=[288.14,0.8497,-5.90] # new target values: averages during the years
 outputpath = "/Users/cconn/Documents/Explore_controller/controller_output/"
 
 #refvals=[288.21,0.594,-6.006] # new version of the model (GLENS values)
-kivals=[0.0183,0.0753,0.3120] #[0.0183,0.0753,0.3120]
+kivals=[0.0183,0.0753,0.3120]
 kpvals=[0.0183,0.0753,0.3120] #[0.0183,0.0753,0.3120]
 # kivals=[0.,0.,0.]
 # kpvals=[0.,0.,0.]
@@ -82,21 +82,7 @@ de=numpy.array([T0-refvals[0],T1-refvals[1],T2-refvals[2]]) # error terms
 
 # timestamp=firstyear
 sumde=de
-# sumde =  [2.074497841, -1.462632687, -0.187577661]
-# print(sumde)
-
 sumdt2=de[2]
-
-# if firsttime==1:
-#     timestamp=firstyear
-#     sumde=de
-#     sumdt2=de[2]
-# else:
-#     timestamp=int(loglines[-1][0])+1
-#     sumdt0=float(loglines[-1][2])+(T0-refvals[0])
-#     sumdt1=float(loglines[-1][4])+(T1-refvals[1])
-#     sumdt2=float(loglines[-1][6])+(T2-refvals[2])
-#     sumde=numpy.array([sumdt0,sumdt1,sumdt2])
 
 # dt should be 1
 dt=1 #1 #timestamp-baseyear
@@ -138,17 +124,17 @@ l2=min(max(l2step4,0),l0-l1s-l1n)
 # l1s=0.131598046625
 # l2=0
 
-ell=numpy.array([[l0],[l1n],[l1s],[l2]])
+ell=np.array([[l0],[l1n],[l1s],[l2]])
 
 # preventing integrator wind-up
 if (l2==(l0-l1s-l1n)):
     sumdt2=sumdt2-(T2-refvals[2])
     sumde[2]=sumdt2
 
-M=numpy.array([[0,30,30,0],[0,0,45,20],[20,45,0,0],[40,0,0,40]])
-F=numpy.array([[1,1,1,1],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+M=np.array([[0,30,30,0],[0,0,45,20],[20,45,0,0],[40,0,0,40]])
+F=np.array([[1,1,1,1],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
 
-q=numpy.dot(numpy.dot(numpy.transpose(M),numpy.linalg.inv(F)),ell)
+q=np.dot(np.dot(np.transpose(M),np.linalg.inv(F)),ell)
 
 
 # sensitivity[:,la,lo] = q[:,0]

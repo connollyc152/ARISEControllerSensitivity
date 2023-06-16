@@ -4,21 +4,27 @@ import xarray as xr
 import numpy as np
 from cartopy.util import add_cyclic_point
 from netCDF4 import date2num,num2date
+import netCDF4 as nc
 
-SST_files = ["SST_Basestates.nc"]
+import pandas as pd
+times = pd.date_range(start='01/01/2035', end='12/31/2069', freq='M')
 
-datapath = "/Users/cconn/Documents/Explore_controller/controller_input/Data/"
+def Save_ENSO_Anom(anoms):
+    # from netCDF4 import date2num,num2date
+    # ts_time_units = 'hours since 1800-01-01'
+    # dates = date2num(times, ts_time_units, 'noleap')
+    
+    ts = nc.Dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/ENSO_anomalies.nc", 'w' , format='NETCDF4')
+    ts_member = ts.createDimension('member',100)
+    ts_time = ts.createDimension('time',len(times))
+     
+    ts_anomalies = ts.createVariable('ENSO_anomalies','f4',('member','time'))
+    ts_time = ts.createVariable('time','f4',('time'))
+    
+    ts_anomalies[:,:] = anoms
+    ts_time[:] = times
 
-f = xr.open_dataset(datapath + SST_files[0])
-
-times = f["time"][:660] #86
-lats = f['lat']
-lons = f['lon']
-
-ts_time_units = 'hours since 1800-01-01'
-times = num2date(times, ts_time_units, 'noleap')
-
-f.close()
+    ts.close()   
 
 def Plot_ENSO_Map(plot_data, title, levels, colorbar):
     ax = plt.axes(projection=ccrs.Robinson(central_longitude=180))
@@ -48,12 +54,12 @@ def Plot_Gobal_Map(plot_data, title, levels, colorbar):
     
     plt.show()
     
-def Add_Metadata_4(data):
+def Add_Metadata_4(data, lats, lons):
     # print(lats)
     data = xr.DataArray(data,
         dims = ['member','time','lat','lon'],
         coords=dict(
-            member = (range(0,10)),
+            member = (range(0,100)),
             time = (times), 
             # lat = (lats.sel(lat=slice(-5, 5))), 
             # lon = (lons.sel(lon=slice(190, 240)))
@@ -63,12 +69,12 @@ def Add_Metadata_4(data):
         )
     return data
 
-def Add_Metadata_4_cut(data):
+def Add_Metadata_4_cut(data, lats, lons):
     # print(lats)
     data = xr.DataArray(data,
         dims = ['member','time','lat','lon'],
         coords=dict(
-            member = (range(0,10)),
+            member = (range(0,100)),
             time = (times), 
             lat = (lats.sel(lat=slice(-5, 5))), 
             lon = (lons.sel(lon=slice(190, 240)))
@@ -77,14 +83,14 @@ def Add_Metadata_4_cut(data):
     return data
 
 
-def Calc_ENSO34(ensemble_array, STANDARDIZE, RUNMEAN):
+def Calc_ENSO34(ensemble_array, STANDARDIZE, RUNMEAN, lats, lons):
     
-    ensemble_array = Add_Metadata_4(ensemble_array)
+    ensemble_array = Add_Metadata_4(ensemble_array, lats, lons)
     if STANDARDIZE:
         ensemble_array = ensemble_array.groupby("time.month") / ensemble_array.groupby("time.month").std("time")
     
     tos_nino34 = ensemble_array.sel(lat=slice(-5, 5), lon=slice(190, 240))
-    tos_nino34 = Add_Metadata_4_cut(tos_nino34)
+    tos_nino34 = Add_Metadata_4_cut(tos_nino34, lats, lons)
     
     weights = np.cos(np.deg2rad(tos_nino34.lat))
     weights.name = "weights"
@@ -92,6 +98,8 @@ def Calc_ENSO34(ensemble_array, STANDARDIZE, RUNMEAN):
     
     if RUNMEAN > 0:
         index_nino34 = index_nino34.rolling(time=RUNMEAN, center=True).mean()
+    
+    Save_ENSO_Anom(index_nino34)
 
     return(index_nino34)
 

@@ -7,6 +7,8 @@ from cartopy.util import add_cyclic_point
 import netCDF4 as nc
 import pandas as pd
 from netCDF4 import date2num,num2date
+import gc
+gc.enable()
 
 lower = plt.cm.RdBu_r(np.linspace(0,.49, 49))
 white = plt.cm.RdBu_r(np.ones(2)*0.5)
@@ -54,132 +56,56 @@ def Plot_Gobal_Map(plot_data, title, levels, colorbar, lats, lons):
     plt.title(title)
     
     plt.show()
-    
-def CalculateBasestate_old(SAVE_ANOMALIES, SAVE_BASESTATES, data, VARIABLE,
-                       lats, lons, times):
-        
-    if VARIABLE == "SST":
-        data = data - 270
-        
-    #Calculate Ensemble mean    
-    ensemble_mean = np.mean(data, axis = 0)
-
-    #polyfit of the ensemble_mean (K)
-    basestate = np.empty(shape = (660, 192, 288))
-    for lat in np.arange(0, len(lats), 1):
-        for lon in np.arange(0, len(lons), 1):
-            x = np.arange(0, len(ensemble_mean[:,0,0]), 1)
-            z = np.polyfit(x,ensemble_mean[:,lat,lon], deg = 3)
-
-            basestate[:,lat,lon] = np.polyval(z,x)
-            
-        
-    #Remove the climate change trend  
-    detrended = np.empty(shape = (len(data[:,0,0,0]), 660, 192, 288))
-    for member in range(0, len(data[:,0,0,0])):
-        for lat in np.arange(0, len(lats), 1):
-            for lon in np.arange(0, len(lons), 1):
-        
-                detrended[member, :, lat, lon] = data[member,:,lat,lon] - basestate[:, lat, lon]
-        
-    #Calculate anomalies from detrended data
-    vals_anom = np.empty(shape = (len(data[:,0,0,0]), 660, 192, 288))
-    for member in range(0, len(data[:,0,0,0])):  
-        vals_mean = np.mean(detrended[member,:,:,:], axis = 0)
-        
-        vals_anom[member, :, :, :] = detrended[member,:,:,:] - vals_mean
-    
-    #Remove seasonal cycle from detrended anomaly data
-    anom_noseas = np.empty(shape = (len(data[:,0,0,0]), 660, 192, 288))
-    for member in range(0, len(data[:,0,0,0])):
-        for lat in np.arange(0, len(lats), 1):
-            for lon in np.arange(0, len(lons), 1):
-                    data_temp = vals_anom[member,:,lat,lon]
-
-                    Z = np.fft.fft(data_temp)
-                    Yfft = Z/np.size(data_temp)
-    
-                    # combine symmetric parts of the FFT and plot the power spectrum as a function of frequency
-                    freq = np.arange(0,np.size(data_temp)/2)/float(np.size(data_temp))
-    
-    
-                    # the factor of 2 in front is needed or the sum won't equal the total variance of X
-                    Ck2 = 2.*np.abs(Yfft[0:int(np.size(data_temp)/2)+1])**2 
-    
-                    Z[50:60] = 0.0
-                    Z[-60:-50] = 0.0
-                    
-                    # plt.plot(Z)
-                    # plt.show()
-                
-                    X_filtered = np.real(np.fft.ifft(Z))    
-                
-                    anom_noseas[member,:,lat,lon] = X_filtered #+ float(vals_mean[lat,lon]) 
 
 def CalculateBasestate(SAVE_ANOMALIES, SAVE_BASESTATES, data, VARIABLE,
-                       lats, lons, times):
+                       lats, lons, times, EXTRA):
     print("CALCULATING BASESTATE")
+    print(np.shape(data))
         
     if VARIABLE == "SST":
         data = data - 270
-        
+
     #Calculate Ensemble mean    
     ensemble_mean = np.mean(data, axis = 0)
 
     #polyfit of the ensemble_mean (K)
-    basestate = np.empty(shape = (660, 192, 288))
+    basestate = np.empty(shape = (420, 192, 288))
     for lat in np.arange(0, len(lats), 1):
         for lon in np.arange(0, len(lons), 1):
             x = np.arange(0, len(ensemble_mean[:,0,0]), 1)
             z = np.polyfit(x,ensemble_mean[:,lat,lon], deg = 3)
 
             basestate[:,lat,lon] = np.polyval(z,x)
-            
-        
+
     #Remove the climate change trend  
-    detrended = np.empty(shape = (len(data[:,0,0,0]), 660, 192, 288))
+    detrended = np.empty(shape = (len(data[:,0,0,0]), 420, 192, 288))
     for member in range(0, len(data[:,0,0,0])):
+        print(member)
         for lat in np.arange(0, len(lats), 1):
             for lon in np.arange(0, len(lons), 1):
         
                 detrended[member, :, lat, lon] = data[member,:,lat,lon] - basestate[:, lat, lon]
-        
-    #Calculate anomalies from detrended data
-    vals_anom = np.empty(shape = (len(data[:,0,0,0]), 660, 192, 288))
-    for member in range(0, len(data[:,0,0,0])):  
-        vals_mean = np.mean(detrended[member,:,:,:], axis = 0)
-        
-        vals_anom[member, :, :, :] = detrended[member,:,:,:] - vals_mean
+    # del(data, basestate)
     
     #Remove seasonal cycle from detrended anomaly data
-    #anom_noseas = np.empty(shape = (len(data[:,0,0,0]), 660, 192, 288))
-    
-    vals_anom = Add_Metadata_4(vals_anom, lats, lons, times)
-    climatology = vals_anom.groupby("time.month").mean("time")
+    detrended = Add_Metadata_4(detrended, lats, lons, times)
+    # ensemble_mean = Add_Metadata_3(ensemble_mean, lats, lons, times)
+    temp = detrended.mean("member")
+    climatology = temp.groupby("time.month").mean("time")
 
-    anom_noseas = vals_anom.groupby("time.month") - climatology
-    
-    # for member in range(0, len(data[:,0,0,0])):
-    #     for lat in np.arange(0, len(lats), 1):
-    #         for lon in np.arange(0, len(lons), 1):
-    #             print(lon)
-    #             plt.plot(anom_noseas[member,:,80,lon])
-    #             plt.show()
-                    
-    #anom_noseas: anomalies detrended and seasonal cycle removed. 
-    #basestate: smoothed climate chagne trend. 
+    detrended = detrended.groupby("time.month") - climatology
+    del(climatology)
     basestate = Add_Metadata_3(basestate, lats, lons, times)
-    anom_noseas = Add_Metadata_4(anom_noseas, lats, lons, times)
-    Plot_Gobal_Map(basestate[0,:,:], 'Bastestate 01-01-2035', None, 'Reds', lats, lons)
-    Plot_Gobal_Map(anom_noseas[0,0,:,:], 'Anomalies member 1 temperature 01-01-2035', None, 'Reds', lats, lons)            
+        
+    # basestate = Add_Metadata_3(basestate, lats, lons, times)
+    detrended = Add_Metadata_4(detrended, lats, lons, times)
+    # Plot_Gobal_Map(basestate[0,:,:], 'Bastestate 01-01-2035', None, 'Reds', lats, lons)
+    Plot_Gobal_Map(detrended[0,0,:,:], 'Anomalies member 1 temperature 01-01-2035', None, 'Reds', lats, lons)        
     
     if SAVE_ANOMALIES:
-        from netCDF4 import date2num,num2date
-        ts_time_units = 'hours since 1800-01-01'
-        dates = date2num(times, ts_time_units, 'noleap')
         
-        ts = nc.Dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/" + VARIABLE + "_anomalies.nc", 'w' , format='NETCDF4')
-        ts_members = ts.createDimension('members',len(data))
+        ts = nc.Dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/" + VARIABLE + "_anomalies" + EXTRA + ".nc", 'w' , format='NETCDF4')
+        ts_members = ts.createDimension('members',len(detrended[:, 0, 0, 0]))
         ts_time = ts.createDimension('time',len(times))
         ts_lat = ts.createDimension('lat',len(lats))
         ts_lon = ts.createDimension('lon',len(lons))
@@ -189,18 +115,17 @@ def CalculateBasestate(SAVE_ANOMALIES, SAVE_BASESTATES, data, VARIABLE,
         ts_lat = ts.createVariable('lat','f4',('lat'))
         ts_lon = ts.createVariable('lon','f4',('lon'))
         
-        ts_instd[:,:,:,:] = anom_noseas
-        ts_time[:] = dates
+        ts_instd[:,:,:,:] = detrended
+        ts_time[:] = times
         ts_lat[:] = lats
         ts_lon[:] = lons
       
-        
     if SAVE_BASESTATES:
-        from netCDF4 import date2num,num2date
-        ts_time_units = 'hours since 1800-01-01'
-        dates = date2num(times, ts_time_units, 'noleap')
+        # from netCDF4 import date2num,num2date
+        # ts_time_units = 'hours since 1800-01-01'
+        # dates = date2num(times, ts_time_units, 'noleap')
         
-        ts = nc.Dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/" + VARIABLE + "_Basestates.nc", 'w' , format='NETCDF4')
+        ts = nc.Dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/" + VARIABLE + "_Basestates" + EXTRA + ".nc", 'w' , format='NETCDF4')
         ts_time = ts.createDimension('time',len(times))
         ts_lat = ts.createDimension('lat',len(lats))
         ts_lon = ts.createDimension('lon',len(lons))
@@ -211,11 +136,14 @@ def CalculateBasestate(SAVE_ANOMALIES, SAVE_BASESTATES, data, VARIABLE,
         ts_lat = ts.createVariable('lat','f4',('lat'))
         ts_lon = ts.createVariable('lon','f4',('lon'))
         
-        ts_ensemble_mean[:,:,:] = ensemble_mean
+        # ts_ensemble_mean[:,:,:] = ensemble_mean
         ts_basestate[:,:,:] = basestate
-        ts_time[:] = dates
+        ts_time[:] = times
         ts_lat[:] = lats
         ts_lon[:] = lons
+
+        print(basestate)
+        print(times)
 
         ts.close()   
     
