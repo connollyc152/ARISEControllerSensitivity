@@ -15,7 +15,7 @@ def Save_ENSO_Anom(anoms):
     # dates = date2num(times, ts_time_units, 'noleap')
     
     ts = nc.Dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/ENSO_anomalies.nc", 'w' , format='NETCDF4')
-    ts_member = ts.createDimension('member',100)
+    ts_member = ts.createDimension('member',len(anoms[:,0]))
     ts_time = ts.createDimension('time',len(times))
      
     ts_anomalies = ts.createVariable('ENSO_anomalies','f4',('member','time'))
@@ -59,7 +59,7 @@ def Add_Metadata_4(data, lats, lons):
     data = xr.DataArray(data,
         dims = ['member','time','lat','lon'],
         coords=dict(
-            member = (range(0,100)),
+            member = (range(0,len(data[:,0,0,0]))),
             time = (times), 
             # lat = (lats.sel(lat=slice(-5, 5))), 
             # lon = (lons.sel(lon=slice(190, 240)))
@@ -74,7 +74,7 @@ def Add_Metadata_4_cut(data, lats, lons):
     data = xr.DataArray(data,
         dims = ['member','time','lat','lon'],
         coords=dict(
-            member = (range(0,100)),
+            member = (range(0,len(data[:,0,0,0]))),
             time = (times), 
             lat = (lats.sel(lat=slice(-5, 5))), 
             lon = (lons.sel(lon=slice(190, 240)))
@@ -86,8 +86,8 @@ def Add_Metadata_4_cut(data, lats, lons):
 def Calc_ENSO34(ensemble_array, STANDARDIZE, RUNMEAN, lats, lons):
     
     ensemble_array = Add_Metadata_4(ensemble_array, lats, lons)
-    if STANDARDIZE:
-        ensemble_array = ensemble_array.groupby("time.month") / ensemble_array.groupby("time.month").std("time")
+    # if STANDARDIZE:
+        # ensemble_array = ensemble_array.groupby("time.month") / ensemble_array.groupby("time.month").std("time")
     
     tos_nino34 = ensemble_array.sel(lat=slice(-5, 5), lon=slice(190, 240))
     tos_nino34 = Add_Metadata_4_cut(tos_nino34, lats, lons)
