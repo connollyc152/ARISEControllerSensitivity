@@ -11,7 +11,13 @@
 
 **createControllerInputs/CalculateBasestate.py** : Calculates and saves the Basestate (Smoothed climate chnage) data.
 
-**createControllerInputs/CalcualteENSO.py** : Calculated ENSO from temperature anomalies
+**createControllerInputs/CalcualteENSO.py** : Calculate temperature anomalies associated with the ENSO
+
+**createControllerInputs/CalcualteSAM.py** : Calculate temperature anomalies associated with the SAM
+
+**createControllerInputs/CalcualteNAO.py** : Calculate temperature anomalies associated with the NAO
+
+**createControllerInputs/CalcualteVolc.py** : Calculated temperature anomalies associated with a the Pinatubo eruption
 
 **createContollerInputs/main_input.py** : Main file used to add temperature anomalies to basestates and then feed temperature map to main_controller.py.
 
