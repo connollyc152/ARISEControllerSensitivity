@@ -4,14 +4,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cartopy.crs as ccrs
 from cartopy.util import add_cyclic_point
-from netCDF4 import date2num,num2date
 sys.path.insert(0, '/Users/cconn/Documents/Explore_controller/controller')
 import main_controller as CONTROLLER
 sys.path.insert(0, '/Users/cconn/Documents/Explore_controller/controller_output/')
 import plotFunctions as pF
 import os.path
 import gc
-import netCDF4 as nc
 gc.enable()
 
 import matplotlib.colors
@@ -113,19 +111,24 @@ CALC_NAO = True
 CALC_SAM = True
 CALC_VOLC = True
 
+#Creates empty dictionary that will be filled with opened data
 data = {}
+#open either ARISE; "SSP45" or the large ensemble: "LE"
 data_type = "SSP45" #"LE" #"SSP45"
-PARTS = ["BASESTATES", "ENSO", "NAO", "SAM"]
 
-ENSO_STATES = [0]#np.arange(-2, 2.2, .2)#[-1.2, -1, 1, 1.2]#(np.arange(-2.4, 2.7, .3))#[-2,-1.75,-1.5,-1.25,-1,-.75,-.5,-.25,-.01,0,.01,.25,.5,.75,1,1.25,1.5,1.75,2,2.25]
+#Indicate which components to include in the controller input. [0]: not used as
+#an input. Code will calculate average between a range. Volcano can only either
+#be on or off. Any year can be used in BASESTATES
+ENSO_STATES = [0]#[-1.2, -1, 1, 1.2] #np.arange(-2, 2.2, .2)#(np.arange(-2.4, 2.7, .3))#[-2,-1.75,-1.5,-1.25,-1,-.75,-.5,-.25,-.01,0,.01,.25,.5,.75,1,1.25,1.5,1.75,2,2.25]
 NAO_STATES = [0]#np.arange(-2, 2.2, .2)#[-1.2, -1, 1, 1.2]#np.arange(-2, 2.2, .2)#(np.arange(-2.4, 2.7, .3))#[-1, 0, 1]
-SAM_STATES = [0]#np.arange(-2, 2.2, .2)#np.arange(-2, 2.2, .2)(np.arange(-2.4, 2.7, .3))
-VOLC_STATES = True
-BASESTATES = [2035, 2045] #np.arange(2035,2070,2)#[2040]
+SAM_STATES = [0]#np.arange(-2, 2.2, .2)(np.arange(-2.4, 2.7, .3))
+VOLC_STATES = False
+BASESTATES = [2035,2045] #np.arange(2035,2070,2)#[2040]
 
-# exp_name = "data_P2_lim"
-exp_name = "ControlLog_monthly_P2_lim_SSP45_DELETE"
+#Files output name
+exp_name = "monthly_LE_T_AddingTO"
 
+#opens and calculates basestates
 if SAVE_BASESTATES or SAVE_ANOMALIES or SAVE_DATA:
     VARIABLE_BASESTATE = 'PSL'
     # folder_path = "/Users/cconn/Documents/CESM245_data/PSL/2035-2070_monthly/"
@@ -134,13 +137,15 @@ if SAVE_BASESTATES or SAVE_ANOMALIES or SAVE_DATA:
 
 
     import CalculateBasestate as Cbase
-    Cbase.CalculateBasestate_butBetter(SAVE_ANOMALIES, SAVE_BASESTATES, SAVE_DATA, data[VARIABLE_BASESTATE], VARIABLE_BASESTATE, 
+    Cbase.CalculateBasestate(SAVE_ANOMALIES, SAVE_BASESTATES, SAVE_DATA, data[VARIABLE_BASESTATE], VARIABLE_BASESTATE, 
                              lats, lons, times, ("_" + data_type)) 
 
+#if needed, opens temperature anomalies associated with Pinatubo
 if CALC_VOLC:
     f = xr.open_dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/monthly/VOLC_anomalies.nc")
     VOLC_array = f["__xarray_dataarray_variable__"]
     
+#opens or calcualtes the correct ENSO index time series
 if CALC_ENSO:
      if data_type == "LE":
         if os.path.isfile("/Users/cconn/Documents/Explore_controller/controller_input/Data/monthly/ENSO_anomalies_LE.nc"):
@@ -162,6 +167,7 @@ if CALC_ENSO:
             data["SST_anomalies_SSP45"]["time"] = times
             ENSO_index = np.array(calc_ENSO.Calc_ENSO34(data["SST_anomalies_SSP45"], False, 5, lats, lons))
     
+#opens or calcualtes the correct NAO index time series
 if CALC_NAO:
     if data_type == "LE":
         if os.path.isfile("/Users/cconn/Documents/Explore_controller/controller_input/Data/monthly/NAO_anomalies_LE.nc"):
@@ -184,7 +190,8 @@ if CALC_NAO:
             data["PSL_anomalies_SSP45"]["time"] = times
             # calc_NAO.Calc_NAO_EOF(data["PSL_anomalies"])
             NAO_index = np.array(calc_NAO.Calc_NAO(data["PSL_anomalies_SSP45"], lats, lons)) 
-       
+
+#opens or calcualtes the correct SAM index time series
 if CALC_SAM:
     if data_type == "LE":
         if os.path.isfile("/Users/cconn/Documents/Explore_controller/controller_input/Data/monthly/SAM_anomalies_LE.nc"):
@@ -212,6 +219,8 @@ if CALC_SAM:
 ###############################
 CONTINUE = True
 ERROR_CHECK = False
+
+#opens basestates and anomalies
 if CONTINUE:
     f = xr.open_dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/monthly/TREFHT_Basestates_SSP45.nc")
 
@@ -232,12 +241,15 @@ if ERROR_CHECK:
     print(np.shape(anomalies))
     print(np.shape(basestates))
 
+#creates empty arrays that will be filled will maps associated with different 
+#basestates and internal variability modes. 
 basestates = Add_Metadata_3(basestates)
 BASESTATE_maps = np.empty(shape=(len(BASESTATES), 192, 288))
 ENSO_maps = np.empty(shape=(len(ENSO_STATES[:-1]), 192, 288))
 NAO_maps = np.empty(shape=(len(NAO_STATES[:-1]), 192, 288))
 SAM_maps = np.empty(shape=(len(SAM_STATES[:-1]), 192, 288))
 
+#Creates the one volcano map
 VOLC_maps = np.empty(shape=(1, 192, 288))  
 if VOLC_STATES:
     VOLC_maps[0,:,:] = VOLC_array
@@ -247,12 +259,10 @@ else:
 basestate_annual = basestates.groupby("time.year").mean()
 for b, B in enumerate(BASESTATES):
     BASESTATE_maps[b, :, :] = basestate_annual.sel(year = B)
-    
-# basestate_diff = BASESTATE_maps[1,:,:] - BASESTATE_maps[0,:,:]
-# print(np.arange(-2.75,3.25,.5))
-# pF.Plot_Gobal_Map(basestate_diff, lats, lons, "basestate 2045 - basestate 2035", np.arange(-2.75,3.25,.5), tmap)
 
 ########SAM############
+#Determines the temperature anomaly maps that fall within a specific range of
+#SAM indexes and calculates the average
 n_SAM_maps = []
 SAM_index["time"] = times
 anomalies["time"] = times
@@ -275,13 +285,13 @@ if list(SAM_STATES) != [0]:
 
         n_SAM_maps.append(sum(n_SAM_maps_mem))
         SAM_maps[n,:,:] = np.nanmean(SAM_members, axis = 0)
-        # print("SAM_MAPS")
-        # print(n_SAM_maps)
 
 else:
     SAM_maps = np.empty(shape=(1, 192, 288))  
     SAM_maps.fill(0)
 ########NAO############
+#Determines the temperature anomaly maps that fall within a specific range of
+#NAO indexes and calculates the average
 n_NAO_maps = []
 NAO_index["time"] = times
 if list(NAO_STATES) != [0]:
@@ -310,6 +320,8 @@ else:
     NAO_maps.fill(0)
 
 #######ENSO############
+#Determines the temperature anomaly maps that fall within a specific range of
+#ENSO indexes and calculates the average
 n_ENSO_maps = []
 ENSO_index["time"] = times
 if list(ENSO_STATES) != [0]:
@@ -333,17 +345,19 @@ if list(ENSO_STATES) != [0]:
 
         n_ENSO_maps.append(sum(n_ENSO_maps_mem))
         ENSO_maps[e,:,:] = np.nanmean(ENSO_members, axis = 0)
-        # print("ENSO_MAPS")
-        # print(n_ENSO_maps)
         # Plot_Gobal_Map(ENSO_maps[e,:,:], "ENSO BETWEEN " + str(ENSO_STATES[e]) + " and " + str(ENSO_STATES[e + 1]), np.linspace(-3,3,15), tmap)
 else:
     ENSO_maps = np.empty(shape=(1, 192, 288))  
     ENSO_maps.fill(0)
 
 ################
+#Files headers are used in the output text file.
 ADD_FILEHEADERS = ['BASESTATE_YEAR', 'ENSO_MIN', 'ENSO_MAX', 'ENSO_n', 'ENSO_q', 
                    'NAO_MIN', 'NAO_MAX', 'NAO_n', 'NAO_q', 'SAM_MIN', 'SAM_MAX', 'SAM_n', 'SAM_q', 'VOLC_q']
-   
+
+#Inject determines whether the maps actually pass through the controller and 
+#a text file is output. PLOT_COMPOSITES determines if the six paneled plot
+#is created. This is pretty slow but does plot all components.    
 INJECT = True
 PLOT_COMPOSITES = False
     
@@ -394,6 +408,8 @@ for b, B in enumerate(BASESTATES):
                 if INJECT:
                     CONTROLLER_map = Add_Initial_dim(CONTROLLER_map)
                     # Plot_Gobal_Map(CONTROLLER_map[0,:,:], str(B), np.linspace(220,320,20), 'Reds')
+                    print(np.shape(CONTROLLER_map))
+                    print(type(CONTROLLER_map))
                     CONTROLLER.Controller_Injection(CONTROLLER_map, exp_name, ADD_FILEHEADERS, METADATA)
                 if PLOT_COMPOSITES:
                     import Plot_composits as PC
@@ -401,37 +417,4 @@ for b, B in enumerate(BASESTATES):
                                       VOLC_maps[0,:,:], SAM_maps[s,:,:], 
                                       BASESTATE_maps[b,:,:], CONTROLLER_map,
                                       METADATA)
-
-
-##########EXTRA
-# Plot_Gobal_Map(ENSO_maps[e,:,:], "ENSO BETWEEN " + str(ENSO_STATES[e]) + " and " + str(ENSO_STATES[e + 1]), np.linspace(-3,3,15), tmap)
-
-# for b, B in enumerate(BASESTATES):
-#     for e, EN in enumerate(ENSO_maps):
-#         for n, NA in enumerate(NAO_maps):
-#             CONTROLLER_map = BASESTATE_maps[b,:,:] + ENSO_maps[e,:,:] + NAO_maps[n,:,:]
-#             METADATA = [str(B)]
-#             if list(ENSO_STATES) != [0]:
-#                 METADATA.append(str(ENSO_STATES[e]))
-#                 METADATA.append(str(ENSO_STATES[e + 1]))
-#                 METADATA.append(str(n_ENSO_maps[e]))
-#                 METADATA.append("ENSO")
-#             else:
-#                 METADATA.append(0)
-#                 METADATA.append(0)
-#                 METADATA.append(0)
-#                 METADATA.append("NA")
-#             if list(NAO_STATES) != [0]:
-#                 METADATA.append(str(NAO_STATES[n]))
-#                 METADATA.append(str(NAO_STATES[n + 1]))
-#                 METADATA.append(str(n_NAO_maps[n]))
-#                 METADATA.append("NAO")
-#             else:
-#                 METADATA.append(0)
-#                 METADATA.append(0)
-#                 METADATA.append(0)
-#                 METADATA.append("NA")
-#             CONTROLLER_map = Add_Initial_dim(CONTROLLER_map)
-#             # Plot_Gobal_Map(CONTROLLER_map[0,:,:], str(B), np.linspace(220,320,20), 'Reds')
-#             CONTROLLER.Controller_Injection(CONTROLLER_map, exp_name, ADD_FILEHEADERS, METADATA)
 

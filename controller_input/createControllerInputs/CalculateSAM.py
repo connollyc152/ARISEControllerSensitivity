@@ -40,7 +40,6 @@ def nandot(X,Y):
 
     
 def Add_Metadata_4(data, lats, lons):
-    # print(lats)
     data = xr.DataArray(data,
         dims = ['member','time','lat','lon'],
         coords=dict(
@@ -55,7 +54,6 @@ def Add_Metadata_4(data, lats, lons):
     return data
 
 def Add_Metadata_2_SAM(data, lat, lon):
-    # print(lats)
     data = xr.DataArray(data,
         dims = ['lat','lon'],
         coords=dict(
@@ -67,9 +65,7 @@ def Add_Metadata_2_SAM(data, lat, lon):
 
 
 def Save_SAM_Anom(anoms):
-    # from netCDF4 import date2num,num2date
-    # ts_time_units = 'hours since 1800-01-01'
-    # dates = date2num(times, ts_time_units, 'noleap')
+    #Saves SAM index values
     
     ts = nc.Dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/SAM_anomalies.nc", 'w' , format='NETCDF4')
     ts_member = ts.createDimension('member',n)
@@ -87,21 +83,22 @@ def Calc_SAM(ensemble_array, lats, lons):
     
     members_n = len(ensemble_array[:,0,0,0])
     ensemble_array = Add_Metadata_4(ensemble_array, lats, lons)
+    
+    #Selects the region used to calculate the SAM index
     SAM_region = ensemble_array.sel(lat=slice(-90, -20))
     lat_region = lats.sel(lat=slice(-90, -20))
 
+    #Create empty array which will be filled with SAM index values
     SAM_index_members = np.empty(shape = (members_n, len(ensemble_array[0,:,0,0])))
     
     for member in np.arange(0,members_n,1):
         data = np.array(SAM_region[member, :, :, :])/100   
         data_f = data.reshape(len(data[:,0,0]), len(data[0,:,0]) * len(data[0,0,:]))  
         
-        C = nandot(data_f, np.transpose(data_f))
-        
+        #Calculate EOF
+        C = nandot(data_f, np.transpose(data_f))   
         lam, Z = LA.eig(C)
- 
         Z = (Z - np.nanmean(Z,axis=0))/np.nanstd(Z,axis=0)
-        
         E = np.dot(Z.T,data_f)
         
         D = nandot(Z[:,:10].T,data.reshape(data.shape[0],data.shape[1]*data.shape[2]))
@@ -115,6 +112,7 @@ def Calc_SAM(ensemble_array, lats, lons):
         plt.colorbar(cs)
         plt.show()
         
+        #This checks that negative EOFs represent the negative phase of the SAM
         if xplot[50, -80] <= 0 and xplot[20, -40] >=0:
             print("fix")
             Z = Z * -1
@@ -134,12 +132,3 @@ def Calc_SAM(ensemble_array, lats, lons):
     Save_SAM_Anom(SAM_index_members)
     return(SAM_index_members)
         
-
-##########Temporary Code##########
-# f = xr.open_dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/PSL_anomalies_SSP45.nc")
-# SLP = f["PSL_anom"]
-# lat = f["lat"]
-# lon = f["lon"]
-
-# Calc_SAM(SLP, lat, lon)
-##################################

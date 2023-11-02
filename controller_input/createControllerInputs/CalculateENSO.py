@@ -10,9 +10,7 @@ import pandas as pd
 times = pd.date_range(start='01/01/2035', end='12/31/2069', freq='M')
 
 def Save_ENSO_Anom(anoms):
-    # from netCDF4 import date2num,num2date
-    # ts_time_units = 'hours since 1800-01-01'
-    # dates = date2num(times, ts_time_units, 'noleap')
+    #saves ENSO index
     
     ts = nc.Dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/ENSO_anomalies.nc", 'w' , format='NETCDF4')
     ts_member = ts.createDimension('member',len(anoms[:,0]))
@@ -55,7 +53,6 @@ def Plot_Gobal_Map(plot_data, title, levels, colorbar):
     plt.show()
     
 def Add_Metadata_4(data, lats, lons):
-    # print(lats)
     data = xr.DataArray(data,
         dims = ['member','time','lat','lon'],
         coords=dict(
@@ -69,8 +66,8 @@ def Add_Metadata_4(data, lats, lons):
         )
     return data
 
+
 def Add_Metadata_4_cut(data, lats, lons):
-    # print(lats)
     data = xr.DataArray(data,
         dims = ['member','time','lat','lon'],
         coords=dict(
@@ -86,16 +83,19 @@ def Add_Metadata_4_cut(data, lats, lons):
 def Calc_ENSO34(ensemble_array, STANDARDIZE, RUNMEAN, lats, lons):
     
     ensemble_array = Add_Metadata_4(ensemble_array, lats, lons)
-    # if STANDARDIZE:
-        # ensemble_array = ensemble_array.groupby("time.month") / ensemble_array.groupby("time.month").std("time")
+    if STANDARDIZE:
+        ensemble_array = ensemble_array.groupby("time.month") / ensemble_array.groupby("time.month").std("time")
     
+    #Select the region used to caluclate ENSO index
     tos_nino34 = ensemble_array.sel(lat=slice(-5, 5), lon=slice(190, 240))
     tos_nino34 = Add_Metadata_4_cut(tos_nino34, lats, lons)
     
+    #Calculated weighted average
     weights = np.cos(np.deg2rad(tos_nino34.lat))
     weights.name = "weights"
     index_nino34 = tos_nino34.weighted(weights).mean(("lat", "lon"))
     
+    #complete the running mean
     if RUNMEAN > 0:
         index_nino34 = index_nino34.rolling(time=RUNMEAN, center=True).mean()
     
@@ -103,52 +103,6 @@ def Calc_ENSO34(ensemble_array, STANDARDIZE, RUNMEAN, lats, lons):
 
     return(index_nino34)
 
-def Calc_ENSO34_oneSST(SST):
-    
-    tos_nino34 = SST.sel(lat=slice(-5, 5), lon=slice(190, 240))
 
-    weights = np.cos(np.deg2rad(tos_nino34.lat))
-    weights.name = "weights"
-    index_nino34 = tos_nino34.weighted(weights).mean(("lat", "lon"))
 
-    return(index_nino34)
 
-def cal_ninoCR(sst, anom_method, index="nino3.4", standardize=False):
-    # calculate anomalies
-    #anom_method: 1 for ens mean; 0 for single run
-    #anomaly
-    
-    # if anom_method == 0:
-    #     sst_a = sst.groupby(“time.month”) - sst.groupby(“time.month”).mean(“time”)
-    # elif anom_method ==1:
-    #     sst_a = sst - sst.mean(“ens”)
-    # #standardize
-    # if standardize == True:
-    #     sst_a = sst_a.groupby(“time.month”) / sst_a.groupby(“time.month”).std(“time”)
-    #pick key region
-    if index == "ONI" or index == "nino3.4":
-        reg =[-5, 5, 190, 240] # 5N-5S; 170W-120W
-    sst_a = sst.sel(lat=slice(reg[0], reg[1]), lon=slice(reg[2],reg[3]))
-    weights = np.cos(np.deg2rad(sst_a.lat))
-    weights.name = "weights"
-    nino = sst_a.weighted(weights).mean(("lat", "lon"))
-    # smooth
-    if index == "ONI":
-        nino_smooth = nino.rolling(time=3, center=True).mean()
-    return nino
-
-# f = xr.open_dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/SST_anomalies.nc")
-# vals = f["SST_anom"]
-
-# vals = np.array(vals)
-# vals = Add_Metadata_4(vals)
-
-# Plot_Gobal_Map(vals[1,0,:,:], 'SST', None, 'Reds')
-
-# nino = cal_ninoCR(vals[1,0,:,:], 1, standardize = True)
-# print(nino)
-
-# nino = Calc_ENSO34_oneSST(vals[1,0,:,:])
-# print(nino)
-
-# sys.exit()

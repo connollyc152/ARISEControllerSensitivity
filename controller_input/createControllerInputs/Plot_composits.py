@@ -1,3 +1,8 @@
+''' 
+Script creates six panel figures useful for looking at the components used to 
+create the controller input.
+'''
+
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 from cartopy.util import add_cyclic_point

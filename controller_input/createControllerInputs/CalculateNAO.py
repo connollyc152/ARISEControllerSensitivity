@@ -66,9 +66,7 @@ def Add_Metadata_2_NAO(data):
 
 
 def Save_NAO_Anom(anoms):
-    # from netCDF4 import date2num,num2date
-    # ts_time_units = 'hours since 1800-01-01'
-    # dates = date2num(times, ts_time_units, 'noleap')
+    #Saves NAO index values
     
     ts = nc.Dataset("/Users/cconn/Documents/Explore_controller/controller_input/Data/NAO_anomalies.nc", 'w' , format='NETCDF4')
     ts_member = ts.createDimension('member',len(anoms[:,0]))
@@ -84,14 +82,18 @@ def Save_NAO_Anom(anoms):
     
 def Calc_NAO(ensemble_array, lats, lons):
     ensemble_array = Add_Metadata_4(ensemble_array, lats, lons)
+    
+    #Selects the region used to calculate the NAO index
     NAO_region1 = ensemble_array.sel(lat=slice(20, 80), lon=slice(-90, 40))
     NAO_region2 = ensemble_array.sel(lat=slice(20, 80), lon=slice(270, 360))
 
+    #Combines the two NAO regions
     NAO_region = xr.concat([NAO_region2, NAO_region1], dim="lon")
     
     NAO_region["lon"] = (np.linspace(-90, 40, 105))
     # Plot_NAO_Map(NAO_region[0,0,:,:], "Final Section", None, None)
     
+    #Create empty array which will be filled with NAO index values
     NAO_index_members = np.empty(shape = (len(ensemble_array[:,0,0,0]), len(ensemble_array[0,:,0,0])))
     
     for member in np.arange(0,len(ensemble_array[:,0,0,0]),1):
@@ -99,15 +101,16 @@ def Calc_NAO(ensemble_array, lats, lons):
         data_f = data.reshape(len(data[:,0,0]), len(data[0,:,0]) * len(data[0,0,:]))     
         C = nandot(data_f, np.transpose(data_f))
         
+        #Calculate EOF
         lam, Z = LA.eig(C)
- 
         Z = (Z - np.nanmean(Z,axis=0))/np.nanstd(Z,axis=0)
-        
         E = np.dot(Z.T,data_f)
         
         D = nandot(Z[:,:10].T,data.reshape(data.shape[0],data.shape[1]*data.shape[2]))
         xplot = D.reshape(D.shape[0],len(data[0,:,0]),len(data[0,0,:]))[0,:,:]
         xplot = Add_Metadata_2_NAO(xplot)
+        
+        #This checks that negative EOFs represent the negative phase of the NAO
         if xplot[50, 52] >= 0 and xplot[20, 52] <=0:
             print("fix")
             Z = Z * -1

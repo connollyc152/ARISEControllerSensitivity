@@ -1,4 +1,9 @@
 #author: Emily Prewett
+'''
+Scripy calculating the temperature anomalies assoiacted with the Pinatubo 
+volcanic eruption.
+'''
+
 import netCDF4 as nc
 import matplotlib.pyplot as plt
 import matplotlib.colors
@@ -30,6 +35,7 @@ mean_part.fill(0)
 
 count = 100
 
+#opens all 100 ensemble members and adds them together
 for i, file in enumerate(files[:count]):
 
     # f = xr.open_dataset(file_folder_path + '\\' + file)
@@ -45,14 +51,19 @@ for i, file in enumerate(files[:count]):
     
     mean_part = mean_part + data
 
+#calculates the ensemble mean by dividing by 100
 ensemble_mean = mean_part/count
+
+#calcualtes and removes the seasonal signal
 climatology = ensemble_mean.groupby("time.month").mean("time")
 ensemble_mean = ensemble_mean.groupby("time.month") - climatology
 
+#select 10 years before eruption 
 ensemble_mean_10before = ensemble_mean.sel(time=slice("1981-07", "1991-06"))
 months_10before = times.sel(time=slice("1981-07", "1991-06"))
 months_10before = months_10before.indexes['time'].to_datetimeindex()
 
+#seslect 10 years before and two years after eruption
 months_before_and_after = ensemble_mean.sel(time=slice("1981-07", "1993-06"))
 
 x = np.arange(0,120,1)
@@ -70,6 +81,7 @@ for lon in np.arange(0, len(lons), 1):
     print(lon)
     for lat in np.arange(0, len(lats), 1):
 
+        #Fits a linear line at each grid point to the 10 years before eruption
         plot_10before = ensemble_mean_10before[:,lat,lon]
         res = sc.stats.linregress(x, plot_10before)
         slope, intercept, r_value, p_value, std_err = sc.stats.linregress(x, plot_10before)
@@ -77,25 +89,25 @@ for lon in np.arange(0, len(lons), 1):
         b = intercept
         y = (m * x) + b
         
+        #extends the linear line to the two years after eruption
         months_avg = months_before_and_after[:,lat,lon]
         y2 = (m * x2) + b
         
+        #Select only the final two years
         temp_Avolc = months_avg[-24:]
         time_Avolc = date2[-24:]
         line_Avolc = y2[-24:]
         
+        #subtract the fit line from the original data
         diff = temp_Avolc - line_Avolc
         
+        #calculate mean of anomaly at the grid point
         point = np.mean(diff)
 
+        #add it to array of temperature anoamlies after eruption
         vol_map[lat,lon] = float(point)
 
-lower = plt.cm.RdBu_r(np.linspace(0,.49, 49))
-white = plt.cm.RdBu_r(np.ones(2)*0.5)
-upper = plt.cm.RdBu_r(np.linspace(0.51, 1, 49))
-colors = np.vstack((lower, white, upper))
-tmap = matplotlib.colors.LinearSegmentedColormap.from_list('terrain_map_white', colors)
-
+#save the volcano component for later use
 # vol_map = xr.DataArray(vol_map,
 #         dims = ['lat','lon'], # new column names
 #         coords=dict(
@@ -106,6 +118,14 @@ tmap = matplotlib.colors.LinearSegmentedColormap.from_list('terrain_map_white', 
 #         )
 # vol_map.to_netcdf(path=r"/Users/cconn/Desktop/VolMap100.nc", mode='w', format='NetCDF4')
 
+#Creates colorbar for plotting
+lower = plt.cm.RdBu_r(np.linspace(0,.49, 49))
+white = plt.cm.RdBu_r(np.ones(2)*0.5)
+upper = plt.cm.RdBu_r(np.linspace(0.51, 1, 49))
+colors = np.vstack((lower, white, upper))
+tmap = matplotlib.colors.LinearSegmentedColormap.from_list('terrain_map_white', colors)
+
+#plots the volcano component
 def Plot_Gobal_Map(plot_data, lats, lons, title, levels, colorbar):
     plt.figure(dpi = 300, figsize = (6, 5))#, projection= ccrs.PlateCarree())
     ax=plt.axes(projection= ccrs.PlateCarree())
