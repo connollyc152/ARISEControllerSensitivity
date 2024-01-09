@@ -13,7 +13,7 @@ datafile = "monthly_SSP45_T_LOCKED.txt"
 datafile_LE = "monthly_LE_T_LOCKED.txt"
 
 #ADD_LE determines whether the LE data is plotted alongside the ARISE data 
-ADD_LE = False
+ADD_LE = True
 #ADD_N_LABEL adds n samples to some plots
 ADD_N_LABEL = False
 PLOT_T_ERROR = False
@@ -33,8 +33,8 @@ PLOT_ENSO_BASESTATE_TOT_N_VOLC = False #Fig 4
 PLOT_SAM_BASESTATE_TOT_N_VOLC = False #Fig 4
 
 COMPARE_NAO_ENSO = True #Fig 3
-COMPARE_NAO_SAM = False #Fig 3
-COMPARE_ENSO_SAM = False #Fig 3
+COMPARE_NAO_SAM = True #Fig 3
+COMPARE_ENSO_SAM = True #Fig 3
 
 ################################
 ########OPEN DATA SSP45#########
@@ -174,6 +174,40 @@ label_font = {'fontname':'Noto Sans JP', 'size':'8', 'color':'black', 'weight':'
 ####################################
 ###########GRIDDED PLOTS############
 ####################################
+COMPARE_NAO_ENSO_TERROR = False
+if COMPARE_NAO_ENSO_TERROR:
+    for y, year in enumerate(Base_years):
+
+        total_inj_t = np.array([n for i, n in enumerate(T2_error) if base_years[i] == year and ENSO_q[i] == "ENSO" and NAO_q[i] == "NAO" and SAM_q[i] == "NA" and VOLC_q[i] == "NA"])
+        base_inj = np.array([n for i, n in enumerate(T2_error) if base_years[i] == year and ENSO_q[i] == "NA" and NAO_q[i] == "NA" and SAM_q[i] == "NA" and VOLC_q[i] == "NA"])
+        
+        total_inj_t = total_inj_t - base_inj
+        
+        x_dim = (rangeV[:-1] + rangeV[1:])/2        
+        total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
+        
+        title = "Impact of internal variability \non T1 in year " + str(year)
+        plt.title(title)
+        cs = plt.pcolormesh(total_inj_t_array, cmap = "bwr", vmin = -.1, vmax = .1)
+        plt.colorbar(cs)
+        plt.show()
+        
+        # title = "Impact of internal variability \non T0 in year " + str(year)
+        # pF.PlotColormeshSmall(x_dim, x_dim, total_inj_t_array, "NAO state", "ENSO state", title) 
+        if ADD_LE:
+            total_inj_t = np.array([n for i, n in enumerate(T2_error_LE) if base_years_LE[i] == year and ENSO_q_LE[i] == "ENSO" and NAO_q_LE[i] == "NAO" and SAM_q_LE[i] == "NA" and VOLC_q_LE[i] == "NA"])
+            
+            total_inj_t = total_inj_t - base_inj
+            
+            x_dim = (rangeV[:-1] + rangeV[1:])/2        
+            total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
+            
+            title = "Impact of internal variability \non T1 in year LE" + str(year)
+            plt.title(title)
+            cs = plt.pcolormesh(total_inj_t_array, cmap = "bwr", vmin = -.1, vmax = .1)
+            plt.colorbar(cs)
+            plt.show()
+            # pF.PlotColormesh(x_dim, x_dim, total_inj_t_array, "NAO Index", "ENSO Index", title)   
 
 if COMPARE_NAO_ENSO:
     for y, year in enumerate(Base_years):
@@ -181,11 +215,14 @@ if COMPARE_NAO_ENSO:
         base_inj = np.array([n for i, n in enumerate(total_inj) if base_years[i] == year and ENSO_q[i] == "NA" and NAO_q[i] == "NA" and SAM_q[i] == "NA" and VOLC_q[i] == "NA"])
         
         total_inj_t = (total_inj_t - base_inj)/base_inj * 100
-        x_dim = (rangeV[:-1] + rangeV[1:])/2        
+        
+        x_dim = (rangeV[:-1] + rangeV[1:])/2  
+        
         total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
         
         title = "Impact of internal variability \non injection amounts in year " + str(year)
-        pF.PlotColormesh(x_dim, x_dim, total_inj_t_array, "NAO state", "ENSO state", title) 
+        pF.PlotColormesh(rangeV, rangeV, total_inj_t_array, "NAO state", "ENSO state", title) 
+
         if ADD_LE:
             total_inj_t = np.array([n for i, n in enumerate(total_inj_LE) if base_years_LE[i] == year and ENSO_q_LE[i] == "ENSO" and NAO_q_LE[i] == "NAO" and SAM_q_LE[i] == "NA" and VOLC_q_LE[i] == "NA"])
             
@@ -194,28 +231,28 @@ if COMPARE_NAO_ENSO:
             total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
             
             title = "Impact of internal variability \non injection amounts in year LE" + str(year)
-            pF.PlotColormesh(x_dim, x_dim, total_inj_t_array, "NAO Index", "ENSO Index", title)   
-            
-    for y, year in enumerate(Base_years):
-        total_inj_t = np.array([n for i, n in enumerate(T_Total_Error) if base_years[i] == year and ENSO_q[i] == "ENSO" and NAO_q[i] == "NAO" and SAM_q[i] == "NA" and VOLC_q[i] == "NA"])
-        base_inj = np.array([n for i, n in enumerate(T_Total_Error) if base_years[i] == year and ENSO_q[i] == "NA" and NAO_q[i] == "NA" and SAM_q[i] == "NA" and VOLC_q[i] == "NA"])
+            pF.PlotColormesh(rangeV, rangeV, total_inj_t_array, "NAO Index", "ENSO Index", title) 
+      
+    # for y, year in enumerate(Base_years):
+    #     total_inj_t = np.array([n for i, n in enumerate(T_Total_Error) if base_years[i] == year and ENSO_q[i] == "ENSO" and NAO_q[i] == "NAO" and SAM_q[i] == "NA" and VOLC_q[i] == "NA"])
+    #     base_inj = np.array([n for i, n in enumerate(T_Total_Error) if base_years[i] == year and ENSO_q[i] == "NA" and NAO_q[i] == "NA" and SAM_q[i] == "NA" and VOLC_q[i] == "NA"])
     
-        total_inj_t = total_inj_t - base_inj
+    #     total_inj_t = total_inj_t - base_inj
         
-        x_dim = (rangeV[:-1] + rangeV[1:])/2        
-        total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
+    #     x_dim = (rangeV[:-1] + rangeV[1:])/2        
+    #     total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
         
-        title = "Impact of internal variability \non T0 in year " + str(year)
-        pF.PlotColormeshSmall(x_dim, x_dim, total_inj_t_array, "NAO state", "ENSO state", title) 
-        if ADD_LE:
-            total_inj_t = np.array([n for i, n in enumerate(T0_error_LE) if base_years_LE[i] == year and ENSO_q_LE[i] == "ENSO" and NAO_q_LE[i] == "NAO" and SAM_q_LE[i] == "NA" and VOLC_q_LE[i] == "NA"])
+    #     title = "Impact of internal variability \non T0 in year " + str(year)
+    #     pF.PlotColormeshSmall(x_dim, x_dim, total_inj_t_array, "NAO state", "ENSO state", title) 
+    #     if ADD_LE:
+    #         total_inj_t = np.array([n for i, n in enumerate(T0_error_LE) if base_years_LE[i] == year and ENSO_q_LE[i] == "ENSO" and NAO_q_LE[i] == "NAO" and SAM_q_LE[i] == "NA" and VOLC_q_LE[i] == "NA"])
             
-            total_inj_t = (total_inj_t - base_inj)/base_inj * 100
-            x_dim = (rangeV[:-1] + rangeV[1:])/2        
-            total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
+    #         total_inj_t = (total_inj_t - base_inj)/base_inj * 100
+    #         x_dim = (rangeV[:-1] + rangeV[1:])/2        
+    #         total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
             
-            title = "Impact of internal variability \non T0 in year LE" + str(year)
-            pF.PlotColormesh(x_dim, x_dim, total_inj_t_array, "NAO Index", "ENSO Index", title)   
+    #         title = "Impact of internal variability \non T0 in year LE" + str(year)
+    #         pF.PlotColormesh(x_dim, x_dim, total_inj_t_array, "NAO Index", "ENSO Index", title)   
 
 if COMPARE_NAO_SAM:
     for y, year in enumerate(Base_years):
@@ -227,7 +264,7 @@ if COMPARE_NAO_SAM:
         total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
         
         title = "Impact of internal variability \non injection amounts in year " + str(year)
-        pF.PlotColormesh(x_dim, x_dim, total_inj_t_array, "SAM state", "NAO state", title)
+        pF.PlotColormesh(rangeV, rangeV, total_inj_t_array, "SAM state", "NAO state", title)
         
         if ADD_LE:
             total_inj_t = np.array([n for i, n in enumerate(total_inj_LE) if base_years_LE[i] == year and ENSO_q_LE[i] == "NA" and NAO_q_LE[i] == "NAO" and SAM_q_LE[i] == "SAM" and VOLC_q_LE[i] == "NA"])
@@ -237,7 +274,7 @@ if COMPARE_NAO_SAM:
             total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
             
             title = "Impact of internal variability \non injection amounts in year LE" + str(year)
-            pF.PlotColormesh(x_dim, x_dim, total_inj_t_array, "SAM Index", "NAO Index", title)                 
+            pF.PlotColormesh(rangeV, rangeV, total_inj_t_array, "SAM Index", "NAO Index", title)                 
   
 if COMPARE_ENSO_SAM:
     for y, year in enumerate(Base_years):
@@ -249,7 +286,7 @@ if COMPARE_ENSO_SAM:
         total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
         
         title = "Impact of internal variability \non injection amounts in year " + str(year)
-        pF.PlotColormesh(x_dim, x_dim, total_inj_t_array, "SAM state", "ENSO state", title)
+        pF.PlotColormesh(rangeV, rangeV, total_inj_t_array, "SAM state", "ENSO state", title)
         
         if ADD_LE:
             total_inj_t = np.array([n for i, n in enumerate(total_inj_LE) if base_years_LE[i] == year and ENSO_q_LE[i] == "ENSO" and NAO_q_LE[i] == "NA" and SAM_q_LE[i] == "SAM" and VOLC_q_LE[i] == "NA"])
@@ -260,7 +297,7 @@ if COMPARE_ENSO_SAM:
             total_inj_t_array = total_inj_t.reshape(len(x_dim), len(x_dim))
             
             title = "Impact of internal variability \non injection amounts in year LE" + str(year)
-            pF.PlotColormesh(x_dim, x_dim, total_inj_t_array, "SAM Index", "ENSO Index", title)    
+            pF.PlotColormesh(rangeV, rangeV, total_inj_t_array, "SAM Index", "ENSO Index", title)    
 
 
 ####################################

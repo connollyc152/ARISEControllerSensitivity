@@ -70,10 +70,12 @@ def PlotLines(x, y, x_label, y_label, title, color, label, line_style, alpha, li
     
 def PlotColormesh(x, y, data, x_label, y_label, title):
     plt.figure(dpi = (300), figsize = (6, 5))
+    # cs = plt.pcolormesh(data, cmap = tmap, vmin = -100, vmax = 100)
     cs = plt.pcolormesh(x, y, data, cmap = tmap, vmin = -100, vmax = 100)
     # for i in cs.get_array():
     #     if i <= 0:
     #         cs.set_edgecolors([1,0,0,0])
+    
     plt.title(title, **title_font)
     cbar = plt.colorbar(cs, ticks = [-100, -50, 0, 50, 100])
     cbar.ax.set_yticklabels(cbar.ax.get_yticklabels(), **colorbar_font)
@@ -84,13 +86,16 @@ def PlotColormesh(x, y, data, x_label, y_label, title):
     plt.xticks(ticks = [-2, -1, 0, 1, 2], labels = ["-2", "-1", "0", "1", "2"], **axisTick_font)
     ax = plt.gca()
     ax.set_aspect('equal', adjustable='box')
+    
     # plt.show()
     
     y_lines = np.arange(-2,2.2,.2)
     x_lines = np.arange(-2,2.2,.2)
     print(np.shape(x_lines))
     
+    # print(np.shape(cs))
     recon = cs.get_array()
+    # print(np.shape(recon))
     recon = recon.reshape(20,20)
     
     for xi, x_grid in enumerate(recon[:-1,0]):
