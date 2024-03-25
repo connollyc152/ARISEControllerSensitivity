@@ -1,4 +1,6 @@
-# Explore ARISE controller injection amounts to climate modes
+# Quantifying the impact of internal variability on the CESM control algorithm for stratospheric aerosol injection
+
+The original code for the Assessing Responses and Impacts of Solar (ARISE-SAI) controller can be found at: https://doi.org/10.5281/zenodo.6471092
 
 ## Files
 **controller/commonrutines.py** : Common routines used in the controller 
